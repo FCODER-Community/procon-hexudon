@@ -33,5 +33,5 @@ __pycache__/
 .env
 practice-bridge-cache*.json
 
-# Contest materials may contain login details; never publish them
-/materials/
+# The original slides contain login details; only the redacted copy is published
+/materials/Techinical_Presentation.pptx

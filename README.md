@@ -13,6 +13,7 @@ Bot cho phần thi tối ưu lộ trình HEXUDON (Procon Việt Nam 2026): mỗi
 | [`SETUP.MD`](SETUP.MD) | Cài đặt, cấu hình, chạy, xử lý lỗi | Chuẩn cho cách vận hành |
 | [`Kiến trúc.md`](Kiến%20trúc.md) | Thiết kế bên trong solver | Mô tả thiết kế, code là bằng chứng cuối |
 | [`AGENTS.md`](AGENTS.md), [`research/`](research/) | Quy tắc và nhật ký nghiên cứu | Lịch sử; không cần để chạy bot |
+| [`materials/`](materials/) | Tài liệu sưu tầm: đề, Q&A, định dạng, slide (đã che) | Bản gốc để đối chiếu |
 
 ## Cách chạy nhanh
 

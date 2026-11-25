@@ -1,6 +1,6 @@
 # Thể lệ thi đấu HEXUDON
 
-Tối ưu hoá lộ trình HEXUDON — Procon Việt Nam 2026. Tóm lược từ đề chính thức (`2026_Procon_Problem VI.pdf`). Nếu file này khác đề của BTC thì theo BTC.
+Tối ưu hoá lộ trình HEXUDON — Procon Việt Nam 2026. Tóm lược từ đề chính thức (`materials/2026_Procon_Problem VI.pdf`). Nếu file này khác đề của BTC thì theo BTC.
 
 - Mục 1–10 là nội dung của đề. Chỗ ghi *(ngoài đề)* là thông tin bổ sung, không có trong PDF.
 - Hai phụ lục cuối file ghi giải đáp từ Q&A và những chỗ bot trong repo đang làm khác. Phụ lục **không phải đề**.

@@ -152,5 +152,5 @@ Trên Windows, file chạy có đuôi `.exe`.
 
 - Không ghi token vào file được git track, tham số dòng lệnh, log hay ảnh chụp màn hình.
 - Đổi mật khẩu mặc định của tài khoản đội ngay sau lần đăng nhập đầu.
-- Thư mục `materials/` (slide, đề, Q&A) bị git bỏ qua vì tài liệu có thể chứa thông tin đăng nhập.
+- Slide gốc của BTC chứa thông tin đăng nhập: chỉ bản đã che được đưa vào `materials/`. Không commit file gốc.
 - Lỡ commit token thì thu hồi; xoá file không đủ vì lịch sử git vẫn giữ.

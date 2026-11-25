@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Chạy bot UDON-SHIELD theo cấu hình trong .env (Windows và Ubuntu).
 
-    python3 run.py             # Ubuntu
-    python run.py              # Windows
-    python3 run.py --submit    # chế độ GAME_ID: gửi plan thật (mặc định dry-run)
+    python3 run.py --check     # chỉ kiểm tra token và mã trận, không gửi gì
+    python3 run.py             # chơi thật: chọn vai trò và nộp plan
+    python3 run.py --dry-run   # tính plan một ngày, ghi ra đĩa, không nộp
 
+Trên Windows gõ "python" thay cho "python3".
 Token chỉ được truyền qua biến môi trường, không nằm trên dòng lệnh.
 """
 import os
@@ -16,6 +17,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+FLAGS = ([], ["--check"], ["--dry-run"], ["--submit"])  # --submit is the default, kept as an alias
 
 
 def read_env(path):
@@ -30,20 +32,31 @@ def read_env(path):
     return values
 
 
-def commands(config, submit, port, local_token, stamp):
-    """Return (bridge command or None, solver command)."""
+def solver_binary():
+    name = "udonshield_btc" + (".exe" if os.name == "nt" else "")
+    paths = [os.path.join(ROOT, "build-release", name),
+             os.path.join(ROOT, "build-release", "Release", name)]  # Visual Studio generator
+    return next((path for path in paths if os.path.exists(path)), paths[0])
+
+
+def commands(config, flag, port, local_token, stamp):
+    """Return (bridge command or None, solver command or None)."""
     match_id = config.get("MATCH_ID", "")
     game_id = config.get("GAME_ID", "")
     if bool(match_id) == bool(game_id):
-        raise SystemExit("Điền đúng một trong MATCH_ID hoặc GAME_ID trong .env")
-    name = re.sub(r"[^A-Za-z0-9._-]", "-", match_id or game_id)  # ':' is illegal on Windows
+        raise SystemExit("Điền đúng một trong GAME_ID hoặc MATCH_ID trong .env")
+    if match_id and flag in ("--check", "--dry-run"):
+        raise SystemExit("%s chỉ dùng được với GAME_ID" % flag)
+
+    # GAME_ID may be a pasted URL; ':' is illegal in Windows file names.
+    short = (match_id or game_id).split("?")[0].rstrip("/").rsplit("/", 1)[-1]
+    name = re.sub(r"[^A-Za-z0-9._-]", "-", short)
     # A dry-run ACK must never be resumed by a real run, so each dry-run gets its own replay.
-    if game_id and not submit:
+    if flag == "--dry-run":
         name += "-dryrun-%d" % stamp
     replay = os.path.join("artifacts", "btc", name + ".jsonl")
     solver = [
-        os.path.join(ROOT, "build-release", "udonshield_btc" + (".exe" if os.name == "nt" else "")),
-        "http",
+        solver_binary(), "http",
         "--response-ms", config.get("RESPONSE_MS") or "5000",
         "--replay", replay,
     ]
@@ -54,19 +67,20 @@ def commands(config, submit, port, local_token, stamp):
             solver += ["--url", url]
         return None, solver
     bridge = [
-        sys.executable, os.path.join(ROOT, "tools", "practice_bridge.py"),
+        sys.executable, os.path.join(ROOT, "tools", "hexudon_bridge.py"),
         "--game-id", game_id,
+        "--mode", config.get("MODE") or "auto",
         "--port", str(port),
         "--local-token", local_token,
-        "--seed-replay", replay,
     ]
     if url:
         bridge += ["--upstream", url]
-    if config.get("INITIAL_AGENTS"):
-        bridge += ["--initial-agents", config["INITIAL_AGENTS"]]
-    if submit:
-        bridge.append("--submit")
-    solver += ["--match", "practice", "--url", "http://127.0.0.1:%d" % port]
+    if flag == "--check":
+        return bridge + ["--check"], None
+    bridge += ["--replay", replay]
+    if flag == "--dry-run":
+        bridge.append("--dry-run")
+    solver += ["--match", "game", "--url", "http://127.0.0.1:%d" % port]
     return bridge, solver
 
 
@@ -84,12 +98,13 @@ def wait_until_listening(process, port, seconds=60):
             return
         except OSError:
             time.sleep(0.2)
-    raise SystemExit("Bridge không khởi động được, xem log [bridge] ở trên")
+    raise SystemExit("Bridge không khởi động được, xem thông báo ở trên")
 
 
 def main(argv):
-    if argv not in ([], ["--submit"]):
+    if argv not in FLAGS:
         raise SystemExit(__doc__)
+    flag = argv[0] if argv else ""
     env_path = os.path.join(ROOT, ".env")
     if not os.path.exists(env_path):
         raise SystemExit("Chưa có .env. Copy .env.example thành .env rồi điền.")
@@ -99,8 +114,8 @@ def main(argv):
         raise SystemExit("Chưa điền HEXUDON_TOKEN trong .env")
 
     port, local_token = free_port(), secrets.token_hex(16)
-    bridge_command, solver_command = commands(config, bool(argv), port, local_token, int(time.time()))
-    if not os.path.exists(solver_command[0]):
+    bridge_command, solver_command = commands(config, flag, port, local_token, int(time.time()))
+    if solver_command and not os.path.exists(solver_command[0]):
         raise SystemExit(
             "Chưa build bot. Chạy:\n"
             "  cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release\n"
@@ -112,7 +127,10 @@ def main(argv):
         solver_token = token
         if bridge_command:
             # The real token stays in the bridge; the solver only gets the local one.
-            bridge = subprocess.Popen(bridge_command, cwd=ROOT, env=dict(os.environ, HEXUDON_TOKEN=token))
+            bridge_env = dict(os.environ, HEXUDON_TOKEN=token)
+            if not solver_command:
+                return subprocess.call(bridge_command, cwd=ROOT, env=bridge_env)
+            bridge = subprocess.Popen(bridge_command, cwd=ROOT, env=bridge_env)
             wait_until_listening(bridge, port)
             solver_token = local_token
         return subprocess.call(solver_command, cwd=ROOT, env=dict(os.environ, HEXUDON_TOKEN=solver_token))
@@ -125,4 +143,8 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    # Windows consoles may not be UTF-8; never die on a Vietnamese message.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     sys.exit(main(sys.argv[1:]))

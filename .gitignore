@@ -32,3 +32,6 @@ __pycache__/
 # Local secrets and bridge cache
 .env
 practice-bridge-cache*.json
+
+# Contest materials may contain login details; never publish them
+/materials/

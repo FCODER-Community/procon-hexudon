@@ -170,6 +170,9 @@ trong đó:
 - \(D\) là tổng số brand khác nhau theo ngày;
 - \(Q\) là tổng servings.
 
+Luật xếp hạng còn tiêu chí thứ tư là tổng thời gian phản hồi (xem `Đề bài.md`, mục
+9). Tiêu chí này không nằm trong bộ ba và không được comparator nào của solver xét.
+
 Mọi comparator trong solver dùng thứ tự từ điển trên bộ ba này. Các cận, profile,
 route master và resubmission gate cùng dùng một quan hệ thứ tự.
 
